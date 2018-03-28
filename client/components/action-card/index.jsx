@@ -53,6 +53,7 @@ ActionCard.propTypes = {
 	buttonOnClick: PropTypes.func,
 	buttonHref: PropTypes.string,
 	buttonTarget: PropTypes.string,
+	children: PropTypes.any,
 };
 
 export default ActionCard;
