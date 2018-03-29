@@ -39,11 +39,12 @@ import {
 	isMonthly,
 	getPlanFeaturesObject,
 	getPlanClass,
-	PLAN_PERSONAL,
-	PLAN_PREMIUM,
-	PLAN_BUSINESS,
+	TYPE_PERSONAL,
+	TYPE_PREMIUM,
+	TYPE_BUSINESS,
+	GROUP_WPCOM,
 } from 'lib/plans/constants';
-import { getMonthlyPlanByYearly, isFreePlan } from 'lib/plans';
+import { planMatches, getMonthlyPlanByYearly, isFreePlan } from 'lib/plans';
 import { getPlanPath, canUpgradeToPlan, applyTestFiltersToPlansList } from 'lib/plans';
 import { planItem as getCartItemForPlan } from 'lib/cart-values/cart-items';
 import Notice from 'components/notice';
@@ -670,6 +671,12 @@ function getMaxCredits( planProperties, isJetpack ) {
 	);
 }
 
+export const isPrimaryUpgradeByPlanDelta = ( currentPlan, plan ) =>
+	( planMatches( currentPlan, { type: TYPE_PERSONAL, group: GROUP_WPCOM } ) &&
+		planMatches( plan, { type: TYPE_PREMIUM, group: GROUP_WPCOM } ) ) ||
+	( planMatches( currentPlan, { type: TYPE_PREMIUM, group: GROUP_WPCOM } ) &&
+		planMatches( plan, { type: TYPE_BUSINESS, group: GROUP_WPCOM } ) );
+
 export default connect(
 	( state, ownProps ) => {
 		const {
@@ -774,8 +781,7 @@ export default connect(
 					bestValue: bestValue,
 					hideMonthly: false,
 					primaryUpgrade:
-						( currentPlan === PLAN_PERSONAL && plan === PLAN_PREMIUM ) ||
-						( currentPlan === PLAN_PREMIUM && plan === PLAN_BUSINESS ) ||
+						isPrimaryUpgradeByPlanDelta( currentPlan, plan ) ||
 						popular ||
 						newPlan ||
 						bestValue ||
