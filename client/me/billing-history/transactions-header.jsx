@@ -4,18 +4,28 @@
  * External dependencies
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import closest from 'component-closest';
 import Gridicon from 'gridicons';
 import { connect } from 'react-redux';
-import { last, map, range, uniq } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
  * Internal dependencies
  */
-import tableRows from './table-rows';
 import { recordGoogleEvent } from 'state/analytics/actions';
+import {
+	setApp,
+	setNewest,
+	setMonth,
+	setBefore,
+} from 'state/billing-transactions/transaction-filters/actions';
+import {
+	getBillingTransactionFilters,
+	getBillingTransactionAppFilterValues,
+	getBillingTransactionDateFilterValues,
+} from 'state/selectors';
 
 class TransactionsHeader extends React.Component {
 	state = {
@@ -39,17 +49,26 @@ class TransactionsHeader extends React.Component {
 		this.props.recordGoogleEvent( 'Me', 'Clicked on ' + action );
 	};
 
-	getDatePopoverItemClickHandler( analyticsEvent, filter ) {
+	getDatePopoverItemClickHandler( analyticsEvent, date ) {
 		return () => {
 			this.recordClickEvent( 'Date Popover Item: ' + analyticsEvent );
-			this.handlePickerSelection( filter );
+			const { transactionType } = this.props;
+			if ( date.newest ) {
+				this.props.setNewest( transactionType );
+			} else if ( date.month ) {
+				this.props.setMonth( transactionType, date.month );
+			} else {
+				this.props.setBefore( transactionType, date.before );
+			}
+			this.setState( { activePopover: '' } );
 		};
 	}
 
-	getAppPopoverItemClickHandler( analyticsEvent, filter ) {
+	getAppPopoverItemClickHandler( analyticsEvent, app ) {
 		return () => {
 			this.recordClickEvent( 'App Popover Item: ' + analyticsEvent );
-			this.handlePickerSelection( filter );
+			this.props.setApp( this.props.transactionType, app );
+			this.setState( { activePopover: '' } );
 		};
 	}
 
@@ -87,23 +106,15 @@ class TransactionsHeader extends React.Component {
 		);
 	}
 
-	setFilter( filter ) {
-		this.setState( { activePopover: '' } );
-		this.props.onNewFilter( filter );
-	}
-
 	renderDatePopover() {
-		const isVisible = 'date' === this.state.activePopover,
+		const { dateFilters } = this.props,
+			isVisible = 'date' === this.state.activePopover,
 			classes = classNames( {
 				'filter-popover': true,
 				'is-popped': isVisible,
 			} ),
-			previousMonths = range( 6 ).map( function( n ) {
-				return this.props.moment().subtract( n, 'months' );
-			}, this ),
-			monthPickers = previousMonths.map( function( month, index ) {
+			monthPickers = dateFilters.map( function( filterMeta, index ) {
 				let analyticsEvent = 'Current Month';
-
 				if ( 1 === index ) {
 					analyticsEvent = '1 Month Before';
 				} else if ( 1 < index ) {
@@ -111,9 +122,10 @@ class TransactionsHeader extends React.Component {
 				}
 
 				return this.renderDatePicker(
-					month.format( 'MMM YYYY' ),
-					month.format( 'MMM YYYY' ),
-					{ month: month },
+					index,
+					filterMeta.title,
+					filterMeta.value,
+					filterMeta.count,
 					analyticsEvent
 				);
 			}, this );
@@ -136,27 +148,24 @@ class TransactionsHeader extends React.Component {
 								</tr>
 							</thead>
 							<tbody>
-								{ this.renderDatePicker( '5 Newest', this.props.translate( '5 Newest' ), {
-									newest: 5,
-								} ) }
-								{ this.renderDatePicker( '10 Newest', this.props.translate( '10 Newest' ), {
-									newest: 10,
-								} ) }
+								{ this.renderDatePicker(
+									'newest',
+									this.props.translate( 'Newest' ),
+									{
+										newest: true,
+									},
+									''
+								) }
 							</tbody>
 							<thead>
 								<tr>
 									<th>{ this.props.translate( 'By Month' ) }</th>
-									<th className="transactions-header__count">
+									<th className="billing-history__transactions-header-count">
 										{ this.props.translate( 'Transactions' ) }
 									</th>
 								</tr>
 							</thead>
-							<tbody>
-								{ monthPickers }
-								{ this.renderDatePicker( 'Older', this.props.translate( 'Older' ), {
-									before: last( previousMonths ),
-								} ) }
-							</tbody>
+							<tbody>{ monthPickers }</tbody>
 						</table>
 					</div>
 				</div>
@@ -175,15 +184,14 @@ class TransactionsHeader extends React.Component {
 		this.setState( { activePopover: activePopover } );
 	}
 
-	renderDatePicker( titleKey, titleTranslated, date, analyticsEvent ) {
-		const filter = { date };
+	renderDatePicker( titleKey, titleTranslated, date, count, analyticsEvent ) {
 		const currentDate = this.props.filter.date || {};
 		let isSelected;
 
-		if ( date.newest ) {
-			isSelected = date.newest === currentDate.newest;
+		if ( date.newest && currentDate.newest ) {
+			isSelected = true;
 		} else if ( date.month && currentDate.month ) {
-			isSelected = date.month.isSame( currentDate.month, 'month' );
+			isSelected = date.month === currentDate.month;
 		} else if ( date.before ) {
 			isSelected = Boolean( currentDate.before );
 		} else {
@@ -201,27 +209,12 @@ class TransactionsHeader extends React.Component {
 			<tr
 				key={ titleKey }
 				className={ classes }
-				onClick={ this.getDatePopoverItemClickHandler( analyticsEvent, filter ) }
+				onClick={ this.getDatePopoverItemClickHandler( analyticsEvent, date ) }
 			>
 				<td className="descriptor">{ titleTranslated }</td>
-				<td className="transactions-header__count">
-					{ date.newest ? '' : this.getFilterCount( filter ) }
-				</td>
+				<td className="billing-history__transactions-header-count">{ count }</td>
 			</tr>
 		);
-	}
-
-	handlePickerSelection( filter ) {
-		this.setFilter( filter );
-		this.setState( { searchValue: '' } );
-	}
-
-	getFilterCount( filter ) {
-		if ( ! this.props.transactions ) {
-			return;
-		}
-
-		return tableRows.filter( this.props.transactions, filter ).length;
 	}
 
 	renderAppsPopover() {
@@ -230,8 +223,13 @@ class TransactionsHeader extends React.Component {
 			'filter-popover': true,
 			'is-popped': isVisible,
 		} );
-		const appPickers = this.getApps().map( function( app ) {
-			return this.renderAppPicker( app, app, 'Specific App' );
+		const appPickers = this.props.appFilters.map( function( filterMeta ) {
+			return this.renderAppPicker(
+				filterMeta.title,
+				filterMeta.value,
+				filterMeta.count,
+				'Specific App'
+			);
 		}, this );
 
 		return (
@@ -252,7 +250,7 @@ class TransactionsHeader extends React.Component {
 							</tr>
 						</thead>
 						<tbody>
-							{ this.renderAppPicker( this.props.translate( 'All Apps' ), 'all' ) }
+							{ this.renderAppPicker( this.props.translate( 'All Apps' ), 'all', '' ) }
 							{ appPickers }
 						</tbody>
 					</table>
@@ -261,12 +259,7 @@ class TransactionsHeader extends React.Component {
 		);
 	}
 
-	getApps() {
-		return uniq( map( this.props.transactions, 'service' ) );
-	}
-
-	renderAppPicker( title, app, analyticsEvent ) {
-		const filter = { app };
+	renderAppPicker( title, app, count, analyticsEvent ) {
 		const classes = classNames( {
 			'app-picker': true,
 			selected: app === this.props.filter.app,
@@ -276,15 +269,30 @@ class TransactionsHeader extends React.Component {
 			<tr
 				key={ app }
 				className={ classes }
-				onClick={ this.getAppPopoverItemClickHandler( analyticsEvent, filter ) }
+				onClick={ this.getAppPopoverItemClickHandler( analyticsEvent, app ) }
 			>
 				<td className="descriptor">{ title }</td>
-				<td className="transactions-header__count">{ this.getFilterCount( filter ) }</td>
+				<td className="billing-history__transactions-header-count">{ count }</td>
 			</tr>
 		);
 	}
 }
 
-export default connect( null, {
-	recordGoogleEvent,
-} )( localize( TransactionsHeader ) );
+TransactionsHeader.propTypes = {
+	transactionType: PropTypes.string.isRequired,
+};
+
+export default connect(
+	( state, { transactionType } ) => ( {
+		filter: getBillingTransactionFilters( state, transactionType ),
+		appFilters: getBillingTransactionAppFilterValues( state, transactionType ),
+		dateFilters: getBillingTransactionDateFilterValues( state, transactionType ),
+	} ),
+	{
+		recordGoogleEvent,
+		setApp,
+		setNewest,
+		setMonth,
+		setBefore,
+	}
+)( localize( TransactionsHeader ) );
