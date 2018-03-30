@@ -19,8 +19,10 @@ describe( '#getJetpackOnboardingSettings()', () => {
 	test( 'should return null if we have no settings at all', () => {
 		const selected = getJetpackOnboardingSettings(
 			{
-				jetpackOnboarding: {
-					settings: {},
+				jetpack: {
+					settings: {
+						settings: {},
+					},
 				},
 			},
 			12345678
@@ -32,8 +34,10 @@ describe( '#getJetpackOnboardingSettings()', () => {
 	test( 'should return null if we have no settings for the current site ID', () => {
 		const selected = getJetpackOnboardingSettings(
 			{
-				jetpackOnboarding: {
-					settings,
+				jetpack: {
+					settings: {
+						settings,
+					},
 				},
 			},
 			12345678
@@ -45,8 +49,10 @@ describe( '#getJetpackOnboardingSettings()', () => {
 	test( 'should return the site settings of a known unconnected site', () => {
 		const selected = getJetpackOnboardingSettings(
 			{
-				jetpackOnboarding: {
-					settings,
+				jetpack: {
+					settings: {
+						settings,
+					},
 				},
 			},
 			2916284
