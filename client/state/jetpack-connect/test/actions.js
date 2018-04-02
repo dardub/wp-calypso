@@ -24,6 +24,7 @@ import {
 	JETPACK_CONNECT_SSO_VALIDATION_ERROR,
 	SITE_RECEIVE,
 	JETPACK_CONNECT_CREATE_ACCOUNT,
+	JETPACK_CONNECT_CREATE_ACCOUNT_RECEIVE,
 } from 'state/action-types';
 
 jest.mock( 'lib/localforage', () => require( 'lib/localforage/localforage-bypass' ) );
@@ -459,6 +460,25 @@ describe( 'actions', () => {
 			const spy = jest.fn();
 			createAccount()( spy );
 			expect( spy ).toHaveBeenCalledWith( { type: JETPACK_CONNECT_CREATE_ACCOUNT } );
+		} );
+
+		test( 'should dispatch receive action with appropriate data', async () => {
+			const userData = { username: 'happyuser' };
+			const data = { some: 'data' };
+			jest.spyOn( wpcom, 'undocumented' ).mockImplementation( () => ( {
+				usersNew( _, callback ) {
+					callback( null, data );
+				},
+			} ) );
+
+			const spy = jest.fn();
+			await createAccount( userData )( spy );
+			expect( spy ).toHaveBeenCalledWith( {
+				data,
+				error: null,
+				type: JETPACK_CONNECT_CREATE_ACCOUNT_RECEIVE,
+				userData,
+			} );
 		} );
 	} );
 } );
