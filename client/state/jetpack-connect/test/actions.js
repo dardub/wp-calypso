@@ -7,6 +7,7 @@
  */
 import * as actions from '../actions';
 import useNock from 'test/helpers/use-nock';
+import wpcom from 'lib/wp';
 import {
 	JETPACK_CONNECT_CONFIRM_JETPACK_STATUS,
 	JETPACK_CONNECT_DISMISS_URL_STATUS,
@@ -22,6 +23,7 @@ import {
 	JETPACK_CONNECT_SSO_VALIDATION_SUCCESS,
 	JETPACK_CONNECT_SSO_VALIDATION_ERROR,
 	SITE_RECEIVE,
+	JETPACK_CONNECT_CREATE_ACCOUNT,
 } from 'state/action-types';
 
 jest.mock( 'lib/localforage', () => require( 'lib/localforage/localforage-bypass' ) );
@@ -439,6 +441,24 @@ describe( 'actions', () => {
 					} );
 				} );
 			} );
+		} );
+	} );
+
+	describe( '#createAccount()', () => {
+		const { createAccount } = actions;
+
+		beforeEach( jest.restoreAllMocks );
+
+		test( 'should dispatch create action', () => {
+			jest.spyOn( wpcom, 'undocumented' ).mockImplementation( () => ( {
+				usersNew( _, callback ) {
+					callback( null, {} );
+				},
+			} ) );
+
+			const spy = jest.fn();
+			createAccount()( spy );
+			expect( spy ).toHaveBeenCalledWith( { type: JETPACK_CONNECT_CREATE_ACCOUNT } );
 		} );
 	} );
 } );
