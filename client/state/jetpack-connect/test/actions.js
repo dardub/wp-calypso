@@ -462,7 +462,7 @@ describe( 'actions', () => {
 			expect( spy ).toHaveBeenCalledWith( { type: JETPACK_CONNECT_CREATE_ACCOUNT } );
 		} );
 
-		test( 'should dispatch receive action with appropriate data', async () => {
+		test( 'should dispatch receive action with appropriate data', () => {
 			const userData = { username: 'happyuser' };
 			const data = { some: 'data' };
 			jest.spyOn( wpcom, 'undocumented' ).mockImplementation( () => ( {
@@ -472,7 +472,7 @@ describe( 'actions', () => {
 			} ) );
 
 			const spy = jest.fn();
-			await createAccount( userData )( spy );
+			createAccount( userData )( spy );
 			expect( spy ).toHaveBeenCalledWith( {
 				data,
 				error: null,
@@ -481,7 +481,7 @@ describe( 'actions', () => {
 			} );
 		} );
 
-		test( 'should dispatch receive action with error data', async () => {
+		test( 'should dispatch receive action with error data', () => {
 			const userData = { username: 'saduser' };
 			const error = { code: 'error' };
 			jest.spyOn( wpcom, 'undocumented' ).mockImplementation( () => ( {
@@ -491,7 +491,7 @@ describe( 'actions', () => {
 			} ) );
 
 			const spy = jest.fn();
-			await createAccount( userData )( spy );
+			createAccount( userData )( spy );
 			expect( spy ).toHaveBeenCalledWith( {
 				data: null,
 				error,
