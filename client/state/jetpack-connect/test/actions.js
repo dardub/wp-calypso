@@ -7,6 +7,7 @@
  */
 import * as actions from '../actions';
 import useNock from 'test/helpers/use-nock';
+import wpcom from 'lib/wp';
 import {
 	JETPACK_CONNECT_CONFIRM_JETPACK_STATUS,
 	JETPACK_CONNECT_DISMISS_URL_STATUS,
@@ -22,6 +23,8 @@ import {
 	JETPACK_CONNECT_SSO_VALIDATION_SUCCESS,
 	JETPACK_CONNECT_SSO_VALIDATION_ERROR,
 	SITE_RECEIVE,
+	JETPACK_CONNECT_CREATE_ACCOUNT,
+	JETPACK_CONNECT_CREATE_ACCOUNT_RECEIVE,
 } from 'state/action-types';
 
 jest.mock( 'lib/localforage', () => require( 'lib/localforage/localforage-bypass' ) );
@@ -438,6 +441,62 @@ describe( 'actions', () => {
 						type: JETPACK_CONNECT_SSO_AUTHORIZE_ERROR,
 					} );
 				} );
+			} );
+		} );
+	} );
+
+	describe( '#createAccount()', () => {
+		const { createAccount } = actions;
+
+		beforeEach( jest.restoreAllMocks );
+
+		test( 'should dispatch create action', () => {
+			jest.spyOn( wpcom, 'undocumented' ).mockImplementation( () => ( {
+				usersNew( _, callback ) {
+					callback( null, {} );
+				},
+			} ) );
+
+			const spy = jest.fn();
+			createAccount()( spy );
+			expect( spy ).toHaveBeenCalledWith( { type: JETPACK_CONNECT_CREATE_ACCOUNT } );
+		} );
+
+		test( 'should dispatch receive action with appropriate data', () => {
+			const userData = { username: 'happyuser' };
+			const data = { some: 'data' };
+			jest.spyOn( wpcom, 'undocumented' ).mockImplementation( () => ( {
+				usersNew( _, callback ) {
+					callback( null, data );
+				},
+			} ) );
+
+			const spy = jest.fn();
+			createAccount( userData )( spy );
+			expect( spy ).toHaveBeenCalledWith( {
+				data,
+				error: null,
+				type: JETPACK_CONNECT_CREATE_ACCOUNT_RECEIVE,
+				userData,
+			} );
+		} );
+
+		test( 'should dispatch receive action with error data', () => {
+			const userData = { username: 'saduser' };
+			const error = { code: 'error' };
+			jest.spyOn( wpcom, 'undocumented' ).mockImplementation( () => ( {
+				usersNew( _, callback ) {
+					callback( error, null );
+				},
+			} ) );
+
+			const spy = jest.fn();
+			createAccount( userData )( spy );
+			expect( spy ).toHaveBeenCalledWith( {
+				data: null,
+				error,
+				type: JETPACK_CONNECT_CREATE_ACCOUNT_RECEIVE,
+				userData,
 			} );
 		} );
 	} );
